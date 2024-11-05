@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { TypedResponse, Context } from 'hono';
+import { Context, TypedResponse } from 'hono';
 import { z } from 'zod';
 import { Variables } from 'hono/types';
-import { Bindings } from '../env';
 import { httpHandler } from '@/server';
+import { Bindings } from '../env';
 
 export type Middleware<I> = ({
   ctx,
@@ -12,7 +12,10 @@ export type Middleware<I> = ({
 }: {
   ctx: I;
   next: <B>(args?: B) => B & I;
-  c: Context<{ Bindings: Bindings; Variables: Variables }>;
+  c: Context<{
+    Bindings: Bindings;
+    Variables: Variables;
+  }>;
 }) => Promise<any>;
 
 export type QueryOperation<Schema extends Record<string, unknown>, ZodInput = never> = {
@@ -25,7 +28,7 @@ export type QueryOperation<Schema extends Record<string, unknown>, ZodInput = ne
 export type MutationOperation<Schema extends Record<string, unknown>, ZodInput = never> = {
   type: 'mutation';
   schema?: z.ZodType<Schema>;
-  handler: <Ctx, Output>({ ctx, c, input }: { ctx: Ctx; c: Context; input: ZodInput }) => Promise<TypedResponse<Output>>;
+  handler: <Input, Output>({ ctx, c }: { ctx: Input; c: Context; input: ZodInput }) => Promise<TypedResponse<Output>>;
   middlewares: Middleware<any>[];
 };
 

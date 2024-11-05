@@ -1,16 +1,15 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { TypedResponse, Context } from 'hono';
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+import { Context, TypedResponse } from 'hono';
 import { z } from 'zod';
 import { Middleware, MutationOperation, QueryOperation } from './types';
-import superjson from 'superjson';
 import { StatusCode } from 'hono/utils/http-status';
+import superjson from 'superjson';
 import { Bindings } from '../env';
 
 /**
  * Type-level SuperJSON integration
  */
-
 declare module 'hono' {
   interface Context {
     superjson: <T>(data: T, status?: number) => SuperJSONTypedResponse<T>;
@@ -20,15 +19,13 @@ declare module 'hono' {
 type SuperJSONParsedType<T> = ReturnType<typeof superjson.parse<T>>;
 export type SuperJSONTypedResponse<T, U extends StatusCode = StatusCode> = TypedResponse<SuperJSONParsedType<T>, U, 'json'>;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export class Procedure<ctx = {}> {
   private readonly middlewares: Middleware<ctx>[] = [];
 
   /**
-   * Optional but recomended:
-   * This make "c.superjson" available in the context api routes
+   * Optional, but recommended:
+   * This makes "c.superjson" available to your API routes
    */
-
   private superjsonMiddleware: Middleware<ctx> = async function superjsonMiddleware({ c, next }) {
     type JSONRespond = typeof c.json;
 
@@ -39,14 +36,14 @@ export class Procedure<ctx = {}> {
         headers: { 'Content-Type': 'application/superjson' },
       });
     }) as JSONRespond;
+
     return await next();
   };
 
   constructor(middlewares: Middleware<ctx>[] = []) {
     this.middlewares = middlewares;
 
-    // add built-in superjson middleware if already not present
-
+    // add built-in superjson middleware if not already present
     if (!this.middlewares.some((mw) => mw.name === 'superjsonMiddleware')) {
       this.middlewares.push(this.superjsonMiddleware);
     }
@@ -58,8 +55,8 @@ export class Procedure<ctx = {}> {
       next,
       c,
     }: {
-      ctx: T;
-      next: <B>(args?: B) => Promise<B & T>;
+      ctx: ctx;
+      next: <B>(args?: B) => Promise<B & ctx>;
       c: Context<{ Bindings: Bindings }>;
     }) => Promise<Return>
   ): Procedure<ctx & T & Return> {
@@ -83,6 +80,7 @@ export class Procedure<ctx = {}> {
       handler: fn as any,
       middlewares: this.middlewares,
     }),
+
     mutation: <Output>(
       fn: ({
         input,
@@ -128,7 +126,7 @@ export class Procedure<ctx = {}> {
       input: never;
       ctx: ctx;
       c: Context<{ Bindings: Bindings }>;
-    }) => SuperJSONTypedResponse<Output> | Promise<SuperJSONTypedResponse<Output>>
+    }) => TypedResponse<Output> | Promise<TypedResponse<Output>>
   ): MutationOperation<{}, Output> {
     return {
       type: 'mutation',

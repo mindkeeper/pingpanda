@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Context, Hono, MiddlewareHandler, Next } from 'hono';
+import { Context, Hono, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { Bindings } from '../env';
-import { MutationOperation, QueryOperation } from './types';
-import { queryParsingMiddleware } from './middleware';
-import { ZodError } from 'zod';
-import { Variables } from 'hono/types';
+import { MiddlewareHandler, Variables } from 'hono/types';
 import { StatusCode } from 'hono/utils/http-status';
+import { ZodError } from 'zod';
+import { Bindings } from '../env';
+import { bodyParsingMiddleware, queryParsingMiddleware } from './middleware';
+import { MutationOperation, QueryOperation } from './types';
 
 type OperationType<I extends Record<string, unknown>, O> = QueryOperation<I, O> | MutationOperation<I, O>;
 
@@ -34,10 +34,10 @@ export const router = <T extends Record<string, OperationType<any, any>>>(obj: T
     }
   });
 
-  for (const [key, operation] of Object.entries(obj)) {
+  Object.entries(obj).forEach(([key, operation]) => {
     const path = `/${key}` as const;
 
-    const operationalMiddlewares: MiddlewareHandler[] = operation.middlewares.map((middleware) => {
+    const operationMiddlewares: MiddlewareHandler[] = operation.middlewares.map((middleware) => {
       const wrapperFunction = async (c: Context, next: Next) => {
         const ctx = c.get('__middleware_output') ?? {};
 
@@ -45,16 +45,19 @@ export const router = <T extends Record<string, OperationType<any, any>>>(obj: T
           c.set('__middleware_output', { ...ctx, ...args });
           return { ...ctx, ...args };
         };
+
         const res = await middleware({ ctx, next: nextWrapper, c });
         c.set('__middleware_output', { ...ctx, ...res });
+
         await next();
       };
+
       return wrapperFunction;
     });
 
     if (operation.type === 'query') {
       if (operation.schema) {
-        route.get(path, queryParsingMiddleware, ...operationalMiddlewares, (c) => {
+        route.get(path, queryParsingMiddleware, ...operationMiddlewares, (c) => {
           const ctx = c.get('__middleware_output') || {};
           const parsedQuery = c.get('parsedQuery');
 
@@ -71,19 +74,22 @@ export const router = <T extends Record<string, OperationType<any, any>>>(obj: T
               throw err;
             }
           }
-          return operation.handler({ ctx, c, input });
+
+          return operation.handler({ c, ctx, input });
         });
       } else {
-        route.get(path, ...operationalMiddlewares, (c) => {
+        route.get(path, ...operationMiddlewares, (c) => {
           const ctx = c.get('__middleware_output') || {};
-          return operation.handler({ ctx, c, input: undefined });
+
+          return operation.handler({ c, ctx, input: undefined });
         });
       }
     } else if (operation.type === 'mutation') {
       if (operation.schema) {
-        route.post(path, queryParsingMiddleware, ...operationalMiddlewares, (c) => {
+        route.post(path, bodyParsingMiddleware, ...operationMiddlewares, (c) => {
           const ctx = c.get('__middleware_output') || {};
           const parsedBody = c.get('parsedBody');
+
           let input;
           try {
             input = operation.schema?.parse(parsedBody);
@@ -97,19 +103,21 @@ export const router = <T extends Record<string, OperationType<any, any>>>(obj: T
               throw err;
             }
           }
-          return operation.handler({ ctx, c, input });
+
+          return operation.handler({ c, ctx, input });
         });
       } else {
-        route.post(path, ...operationalMiddlewares, (c) => {
+        route.post(path, ...operationMiddlewares, (c) => {
           const ctx = c.get('__middleware_output') || {};
-          return operation.handler({ ctx, c, input: undefined });
+
+          return operation.handler({ c, ctx, input: undefined });
         });
       }
     }
-  }
+  });
 
   type InferInput<T> = T extends OperationType<infer I, any> ? I : {};
-  type InferOutput<T> = T extends OperationType<any, infer O> ? O : {};
+  type InferOutput<T> = T extends OperationType<any, infer I> ? I : {};
 
   return route as Hono<
     { Bindings: Bindings; Variables: Variables },
@@ -120,7 +128,7 @@ export const router = <T extends Record<string, OperationType<any, any>>>(obj: T
               input: InferInput<T[K]>;
               output: InferOutput<T[K]>;
               outputFormat: 'json';
-              status: 200;
+              status: StatusCode;
             };
           }
         : {

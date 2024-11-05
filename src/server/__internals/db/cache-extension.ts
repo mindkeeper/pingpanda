@@ -1,21 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import superjson, { SuperJSONResult } from 'superjson';
-import { Redis } from '@upstash/redis/cloudflare';
 import { Prisma } from '@prisma/client';
+import { Redis } from '@upstash/redis/cloudflare';
+import superjson, { SuperJSONResult } from 'superjson';
 
-export type CacheArgs = {
-  cache?: {
-    id: string;
-    ttl?: number;
-  };
-};
+export type CacheArgs = { cache?: { id: string; ttl?: number } };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isSuperJSONResult(obj: any): obj is SuperJSONResult {
   return typeof obj === 'object' && obj !== null && 'json' in obj && 'meta' in obj;
 }
 
-export function cacheExtension({ redis }: { redis: Redis }) {
+/**
+ * The Prisma extension to provide built-in caching with Upstash Redis
+ */
+
+export const cacheExtension = ({ redis }: { redis: Redis }) => {
   return Prisma.defineExtension({
     name: 'prisma-extension-cache',
     model: {
@@ -29,9 +27,10 @@ export function cacheExtension({ redis }: { redis: Redis }) {
           const ctx = Prisma.getExtensionContext(this);
 
           if (cache) {
-            const cacheResult = await redis.get<string>(cache.id);
-            if (cacheResult && isSuperJSONResult(cacheResult)) {
-              return superjson.deserialize<Prisma.Result<T, A, 'findFirst'>>(cacheResult);
+            const cachedResult = await redis.get<string>(cache.id);
+
+            if (cachedResult && isSuperJSONResult(cachedResult)) {
+              return superjson.deserialize<Prisma.Result<T, A, 'findFirst'>>(cachedResult);
             }
           }
 
@@ -39,12 +38,14 @@ export function cacheExtension({ redis }: { redis: Redis }) {
 
           if (cache && result) {
             const serializedResult = superjson.stringify(result);
+
             if (cache.ttl) {
               await redis.set(cache.id, serializedResult, { ex: cache.ttl });
             } else {
               await redis.set(cache.id, serializedResult);
             }
           }
+
           return result;
         },
         async findUnique<T, A>(
@@ -56,9 +57,10 @@ export function cacheExtension({ redis }: { redis: Redis }) {
           const ctx = Prisma.getExtensionContext(this);
 
           if (cache) {
-            const cacheResult = await redis.get<string>(cache.id);
-            if (cacheResult && isSuperJSONResult(cacheResult)) {
-              return superjson.deserialize<Prisma.Result<T, A, 'findUnique'>>(cacheResult);
+            const cachedResult = await redis.get<string>(cache.id);
+
+            if (cachedResult && isSuperJSONResult(cachedResult)) {
+              return superjson.deserialize<Prisma.Result<T, A, 'findUnique'>>(cachedResult);
             }
           }
 
@@ -66,12 +68,14 @@ export function cacheExtension({ redis }: { redis: Redis }) {
 
           if (cache && result) {
             const serializedResult = superjson.stringify(result);
+
             if (cache.ttl) {
               await redis.set(cache.id, serializedResult, { ex: cache.ttl });
             } else {
               await redis.set(cache.id, serializedResult);
             }
           }
+
           return result;
         },
         async findMany<T, A>(
@@ -83,9 +87,10 @@ export function cacheExtension({ redis }: { redis: Redis }) {
           const ctx = Prisma.getExtensionContext(this);
 
           if (cache) {
-            const cacheResult = await redis.get<string>(cache.id);
-            if (cacheResult && isSuperJSONResult(cacheResult)) {
-              return superjson.deserialize<Prisma.Result<T, A, 'findMany'>>(cacheResult);
+            const cachedResult = await redis.get<string>(cache.id);
+
+            if (cachedResult && isSuperJSONResult(cachedResult)) {
+              return superjson.deserialize<Prisma.Result<T, A, 'findMany'>>(cachedResult);
             }
           }
 
@@ -93,19 +98,24 @@ export function cacheExtension({ redis }: { redis: Redis }) {
 
           if (cache && result) {
             const serializedResult = superjson.stringify(result);
+
             if (cache.ttl) {
               await redis.set(cache.id, serializedResult, { ex: cache.ttl });
             } else {
               await redis.set(cache.id, serializedResult);
             }
           }
+
           return result;
         },
         async create<T, A>(this: T, args: Prisma.Args<T, 'create'> & CacheArgs): Promise<Prisma.Result<T, A, 'create'>> {
           const { cache: _cache, ...rest } = args;
           const cache = _cache as CacheArgs['cache'];
           const ctx = Prisma.getExtensionContext(this);
-          if (cache) await redis.del(cache.id);
+
+          if (cache) {
+            await redis.del(cache.id);
+          }
 
           const result = await (ctx as any).$parent[ctx.$name as any].create(rest);
 
@@ -115,7 +125,10 @@ export function cacheExtension({ redis }: { redis: Redis }) {
           const { cache: _cache, ...rest } = args;
           const cache = _cache as CacheArgs['cache'];
           const ctx = Prisma.getExtensionContext(this);
-          if (cache) await redis.del(cache.id);
+
+          if (cache) {
+            await redis.del(cache.id);
+          }
 
           const result = await (ctx as any).$parent[ctx.$name as any].update(rest);
 
@@ -125,7 +138,10 @@ export function cacheExtension({ redis }: { redis: Redis }) {
           const { cache: _cache, ...rest } = args;
           const cache = _cache as CacheArgs['cache'];
           const ctx = Prisma.getExtensionContext(this);
-          if (cache) await redis.del(cache.id);
+
+          if (cache) {
+            await redis.del(cache.id);
+          }
 
           const result = await (ctx as any).$parent[ctx.$name as any].delete(rest);
 
@@ -134,4 +150,4 @@ export function cacheExtension({ redis }: { redis: Redis }) {
       },
     },
   });
-}
+};
