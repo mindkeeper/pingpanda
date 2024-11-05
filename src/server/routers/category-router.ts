@@ -1,7 +1,8 @@
-import { router } from '../__internals/router';
-import { db } from '@/db';
-import { privateProcedure } from '../procedure';
 import { startOfMonth } from 'date-fns';
+import { z } from 'zod';
+import { router } from '../__internals/router';
+import { privateProcedure } from '../procedure';
+import { db } from '@/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,11 +53,20 @@ export const categoryRouter = router({
           ...category,
           uniqueFieldCount,
           eventsCount,
-          latestPing: lastPing?.createdAt || null,
+          lastPing: lastPing?.createdAt || null,
         };
       })
     );
     return c.superjson({ categories: categoriesWithCount });
+  }),
+  deleteCategory: privateProcedure.input(z.object({ name: z.string() })).mutation(async ({ c, input, ctx }) => {
+    const { name } = input;
+    console.log('name', name);
+    await db.eventCategory.delete({
+      where: { name_userId: { name, userId: ctx.user.id } },
+    });
+
+    return c.json({ success: true });
   }),
 });
 
