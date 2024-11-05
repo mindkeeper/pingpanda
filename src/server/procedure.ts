@@ -16,7 +16,7 @@ const authMiddleware = j.middleware(async ({ c, next }) => {
   const auth = await currentUser();
   if (!auth) throw new HTTPException(401, { message: 'Unauthorized' });
   const user = await db.user.findUnique({
-    where: { id: auth.id },
+    where: { externalId: auth.id },
   });
   if (!user) throw new HTTPException(401, { message: 'Unauthorized' });
   return next({ user });
