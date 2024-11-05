@@ -28,5 +28,5 @@ const authMiddleware = j.middleware(async ({ c, next }) => {
  */
 
 export const baseProcedures = j.procedure;
-export const publicProcedures = baseProcedures;
-export const privateProcedure = publicProcedures.use(authMiddleware);
+export const publicProcedure = baseProcedures;
+export const privateProcedure = publicProcedure.use(authMiddleware);

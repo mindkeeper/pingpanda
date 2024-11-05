@@ -3,6 +3,7 @@ import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { EB_Garamond, Inter } from 'next/font/google';
 import { cn } from '@/lib/utils';
+import Providers from '@/providers/react-query';
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -27,7 +28,9 @@ export default function RootLayout({
     <html lang='en'>
       <body className={cn(inter.variable, ebGaramond.variable, 'antialiased min-h-[calc(100vh-1px)] flex flex-col')}>
         <main className='relative flex-1 flex flex-col'>
-          <ClerkProvider>{children}</ClerkProvider>
+          <Providers>
+            <ClerkProvider>{children}</ClerkProvider>
+          </Providers>
         </main>
       </body>
     </html>
