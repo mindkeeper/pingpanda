@@ -1,6 +1,6 @@
 'use client';
 
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useMemo } from 'react';
 import { useCreateEventCategory } from '../_hooks/use-create-event-category';
 import { Modal } from '@/components/ui/modal';
 import { Label } from '@/components/ui/label';
@@ -10,13 +10,20 @@ import { cn } from '@/lib/utils';
 import { EMOJI_OPTIONS } from '../_constants/emoji';
 import { Button } from '@/components/ui/button';
 
-export default function CreateEventCategoryModal({ children }: PropsWithChildren) {
-  const { isOpen, setIsOpen, register, handleSubmit, onSubmit, formErrors, watch, setValue } = useCreateEventCategory();
+interface CreateEventCategoryModalProps extends PropsWithChildren {
+  containerClassName?: string;
+}
+export default function CreateEventCategoryModal({ children, containerClassName }: CreateEventCategoryModalProps) {
+  const { isOpen, setIsOpen, register, handleSubmit, onSubmit, formErrors, watch, setValue, isCreatingCategory } =
+    useCreateEventCategory();
   const watchColor = watch('color');
   const selectedEmoji = watch('emoji');
+  const creteText = useMemo(() => (isCreatingCategory ? 'Creating Category...' : 'Create Category'), [isCreatingCategory]);
   return (
     <>
-      <div onClick={() => setIsOpen(true)}>{children}</div>
+      <div className={containerClassName} onClick={() => setIsOpen(true)}>
+        {children}
+      </div>
 
       <Modal showModal={isOpen} setShowModal={setIsOpen} className='max-w-xl p-8'>
         <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
@@ -82,7 +89,9 @@ export default function CreateEventCategoryModal({ children }: PropsWithChildren
             >
               Cancel
             </Button>
-            <Button type='submit'>Create Category</Button>
+            <Button type='submit' disabled={isCreatingCategory}>
+              {creteText}
+            </Button>
           </div>
         </form>
       </Modal>

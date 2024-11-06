@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CATEGORY_NAME_VALIDATOR } from './category-validator';
 
-export const EVENT_CATEGORY_NAME_VALIDATOR = z.object({
+export const EVENT_CATEGORY_VALIDATOR = z.object({
   name: CATEGORY_NAME_VALIDATOR,
   color: z
     .string()
@@ -10,4 +10,4 @@ export const EVENT_CATEGORY_NAME_VALIDATOR = z.object({
   emoji: z.string().emoji('Invalid emoji').optional(),
 });
 
-export type TEventCategoryValidator = z.infer<typeof EVENT_CATEGORY_NAME_VALIDATOR>;
+export type TEventCategoryValidator = z.infer<typeof EVENT_CATEGORY_VALIDATOR>;

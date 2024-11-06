@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { router } from '../__internals/router';
 import { privateProcedure } from '../procedure';
 import { db } from '@/db';
+import { EVENT_CATEGORY_VALIDATOR } from '@/lib/validators/event-category-validator';
+import { parseColor } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +69,44 @@ export const categoryRouter = router({
     });
 
     return c.json({ success: true });
+  }),
+  createEventCategory: privateProcedure.input(EVENT_CATEGORY_VALIDATOR).mutation(async ({ c, input, ctx }) => {
+    const { user } = ctx;
+    const { name, color, emoji } = input;
+
+    // TODO: ADD PAID PLAN LOGIC
+    const eventCategory = await db.eventCategory.create({
+      data: {
+        name: name.toLowerCase(),
+        color: parseColor(color),
+        emoji,
+        userId: user.id,
+      },
+    });
+
+    return c.json({ eventCategory });
+  }),
+  insertQuickStartCategory: privateProcedure.mutation(async ({ c, ctx }) => {
+    const categories = await db.eventCategory.createMany({
+      data: [
+        {
+          name: 'bug',
+          emoji: '🐛',
+          color: 0xff6b6b,
+        },
+        {
+          name: 'sale',
+          emoji: '💰',
+          color: 0xffeb3b,
+        },
+        {
+          name: 'questions',
+          emoji: '🤔',
+          color: 0x6c5ce7,
+        },
+      ].map((item) => ({ ...item, userId: ctx.user.id })),
+    });
+    return c.json({ success: true, count: categories.count });
   }),
 });
 

@@ -9,6 +9,7 @@ import { ArrowRight, BarChart2, ClockIcon, DatabaseIcon, Trash2 } from 'lucide-r
 import Link from 'next/link';
 import { useDeleteQuery } from '../_hooks/use-delete-category';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
+import DashboardEmptyState from './empty-state';
 
 export default function DashboardPageContent() {
   const { data: categories, isPending: isEventCategoryLoading } = useQuery({
@@ -28,7 +29,7 @@ export default function DashboardPageContent() {
       </div>
     );
   }
-  if (!categories || categories.length === 0) return <div>emtpy categories</div>;
+  if (!categories || categories.length === 0) return <DashboardEmptyState />;
   return (
     <>
       <ul className='max-w-6xl grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
